@@ -25,11 +25,16 @@
   </style>
   <body>
     <div id="app"></div>
-    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script
+      src="https://unpkg.com/react@18/umd/react.development.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+      crossorigin
+    ></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <script type="text/babel">
-
       const jsonLocalStorage = {
         setItem: (key, value) => {
           localStorage.setItem(key, JSON.stringify(value));
@@ -38,78 +43,93 @@
           return JSON.parse(localStorage.getItem(key));
         },
       };
-     
-      const Title = (props) => {
-        return <h1>{props.children}</h1>;
+
+      const fetchCat = async (text) => {
+        const OPEN_API_DOMAIN = "https://cataas.com";
+        const response = await fetch(
+          `${OPEN_API_DOMAIN}/cat/says/${text}?json=true`
+        );
+        const responseJson = await response.json();
+        return `${OPEN_API_DOMAIN}/${responseJson.url}`;
       };
 
-      const Form = ({updateMainCat}) => {
+      function Title(titleText) {
+        return <h1>{titleText.children}</h1>;
+      }
+
+      const Form = ({ updateMainCat }) => {
         const includesHangul = (text) => /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/i.test(text);
-        const [value, setValue] = React.useState('');
-        const [errorMessage, setErrorMessage] = React.useState('');
-        
-        function handleInputChange(e){
+        const [value, setValue] = React.useState("");
+        const [errorMessage, setErrorMessage] = React.useState("");
+
+        function handleInputChange(e) {
           setErrorMessage("");
           setValue(e.target.value.toUpperCase());
           const userValue = e.target.value;
-          if (includesHangul(userValue)){
-            setErrorMessage('한글은 입력할 수 없습니다.');
+          if (includesHangul(userValue)) {
+            setErrorMessage("한글은 입력할 수 없습니다.");
+          } else {
+            setErrorMessage("");
           }
-          else {setErrorMessage('')} 
         }
 
-        function handleFormSubmit(e){
+        function handleFormSubmit(e) {
           e.preventDefault();
           setErrorMessage("");
-          if (value === ''){
-            setErrorMessage('빈 값으로 만들 수 없습니다.');
+          if (value === "") {
+            setErrorMessage("빈 값으로 만들 수 없습니다.");
             return;
           }
-          updateMainCat();
+          updateMainCat(value);
         }
 
         return (
           <form onSubmit={handleFormSubmit}>
-            <input 
-              type="text" 
+            <input
+              type="text"
               name="name"
               value={value}
               placeholder="영어 대사를 입력해주세요"
               onChange={handleInputChange}
             />
             <button type="submit">생성</button>
-            <p style={{color:'red'}}>{errorMessage}</p>
+            <p style={{ color: "red" }}>{errorMessage}</p>
           </form>
-          )
+        );
       };
 
       function CatItem(props) {
-        return(
+        return (
           <li>
-          <img src={props.img} style={{width: '150px', border: "1px solid red"}}/>
-        </li>
+            <img
+              src={props.img}
+              style={{ width: "150px", border: "1px solid red" }}
+            />
+          </li>
         );
       }
 
-      function Favourites ({favourites}){
-        return (
-          <ul className="favorites">
-            {favourites.map(
-              (cat) => (<CatItem img={cat} key={cat}/>
+      function Favourites({ favourites }) {
+        if (favourites.length === 0) {
+          return <p>사진 위 하트를 눌러 고양이 사진을 저장해봐요!</p>;
+        } else
+          return (
+            <ul className="favorites">
+              {favourites.map((cat) => (
+                <CatItem img={cat} key={cat} />
               ))}
-          </ul>
+            </ul>
           );
       }
-      
-      function MainCard({img, onHeartClick}) {
-        return (<div className="main-card">
-          <img
-            src={img}
-            alt="고양이"
-            width="400"
-          />
-          <button onClick={onHeartClick}>🤍</button>
-        </div>);
+
+      function MainCard({ img, onHeartClick, alreadyFavourite }) {
+        const heartIcon = alreadyFavourite ? "💖" : "🤍";
+        return (
+          <div className="main-card">
+            <img src={img} alt="고양이" width="400" />
+            <button onClick={onHeartClick}>{heartIcon}</button>
+          </div>
+        );
       }
 
       const App = () => {
@@ -117,41 +137,68 @@
         const CAT2 = "https://cataas.com/cat/BxqL2EjFmtxDkAm2/says/inflearn";
         const CAT3 = "https://cataas.com/cat/18MD6byVC1yKGpXp/says/JavaScript";
 
-        const [counter,setCounter] = React.useState(
-            jsonLocalStorage.getItem('counter')
-          );
-        const [mainCat, setMainCat] = React.useState(CAT1);
-        const [favourites, setFavourites] = React.useState(
-            jsonLocalStorage.getItem('favourites') || []
-          );
+        const [counter, setCounter] = React.useState(() => {
+          return jsonLocalStorage.getItem("counter");
+        });
 
-        function updateMainCat(){
-          const nextCounter = counter+1;
-          setCounter(nextCounter)
-          setMainCat(CAT2);
-          jsonLocalStorage.setItem('counter',nextCounter);
+        const [mainCat, setMainCat] = React.useState("");
+        const [favourites, setFavourites] = React.useState(() => {
+          return jsonLocalStorage.getItem("favourites") || [];
+        });
+
+        const alreadyFavourite = favourites.includes(mainCat);
+
+        async function setInitialCat() {
+          const newCat = await fetchCat("First cat");
+          setMainCat(newCat);
         }
-        
-        function handleHeartClick(){
+
+        React.useEffect(() => {
+          setInitialCat();
+        }, []);
+
+        React.useEffect(() => {
+          console.log("hello");
+        }, [counter]);
+
+        async function updateMainCat(value) {
+          const newCat = await fetchCat(value);
+
+          setMainCat(newCat);
+
+          setCounter((prev) => {
+            const nextCounter = prev + 1;
+            jsonLocalStorage.setItem("counter", nextCounter);
+            return nextCounter;
+          });
+        }
+
+        function handleHeartClick() {
           const nextFavourites = [...favourites, mainCat];
           setFavourites(nextFavourites);
-          jsonLocalStorage.setItem('favourites', nextFavourites);
+          jsonLocalStorage.setItem("favourites", nextFavourites);
         }
+
+        let titleText =
+          counter <= 0 ? "고양이 가라사대" : counter + "번째 고양이 가라사대";
 
         return (
           <div>
-            <Title>{counter}번째 고양이 가라사대</Title>
+            <Title>{titleText}</Title>
             <Form updateMainCat={updateMainCat} />
-            <MainCard img={mainCat} onHeartClick={handleHeartClick}/>
-            <Favourites favourites={favourites}/>
+            <MainCard
+              img={mainCat}
+              onHeartClick={handleHeartClick}
+              alreadyFavourite={alreadyFavourite}
+            />
+            <Favourites favourites={favourites} />
           </div>
         );
       };
 
-      const drawHere = document.querySelector('#app');
+      const drawHere = document.querySelector("#app");
 
       ReactDOM.createRoot(drawHere).render(<App />);
-
     </script>
   </body>
 </html>
